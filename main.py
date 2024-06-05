@@ -3,13 +3,14 @@ import nltk
 nltk.download('punkt')
 nltk.download('stopwords')
 
+import gensim
+
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 
-import gensim
-
 from pymorphy2 import MorphAnalyzer
 
+import dataclasses
 import math
 
 STOP_WORDS = set(stopwords.words('russian'))
@@ -74,31 +75,35 @@ def texts2docs(texts: list[str]):
     return docs
 
 
-def filter_features(doc: list[str], docs: list[list[str]], lim: int = -1):
+def get_features(doc: list[str], docs: list[list[str]]):
     # Множество слов в документе
-    features = set(doc)
+    uniques = set(doc)
 
     # Для каждого слова из множества считаем TF-IDF
-    data = []
-    for feature in features:
-        weight = tf_idf(feature, doc, docs)
-        data += [(feature, weight)]
-    data.sort(key=lambda x: x[1], reverse=True)
-
-    if lim >= 0:
-        data = data[:min(lim, len(data))]
-
-    features = [feature for feature, weight in data]
+    features = {}
+    for unique in uniques:
+        feature = tf_idf(unique, doc, docs)
+        features[unique] = feature
     return features
 
 
-def create_features_map(docs: list[list[str]], features_lim: int = -1):
-    # "Карта" отфильтрованных признаков
-    features_map = []
-    for doc in docs:
-        features = filter_features(doc, docs, features_lim)
-        features_map += [features]
-    return features_map
+def get_features_map(docs: list[list[str]]):
+    return [get_features(doc, docs) for doc in docs]
+
+
+def vectorize_doc(doc_features: dict, all_features: list):
+    vector = []
+    for feature in all_features:
+        vector.append(doc_features.get(feature, 0.0))
+    return tuple(vector)
+
+
+def vectorize_docs(features_map: list[dict], all_features_names: list[str]):
+    vectors = []
+    for features in features_map:
+        v = vectorize_doc(features, all_features_names)
+        vectors.append(v)
+    return vectors
 
 
 TEXT1 = '''Идейные соображения высшего порядка, а также дальнейшее развитие
@@ -121,5 +126,22 @@ TEXT2 = '''Не следует, однако забывать, что консу
 '''
 
 
+# Предобработка текстов
 docs = texts2docs([TEXT1, TEXT2])
-features_map = create_features_map(docs, 50)
+
+# Формируем множество признаков из всех документов
+all_features_names_set = set()
+for doc in docs:
+    all_features_names_set = all_features_names_set.union(set(doc))
+
+# Упорядочиваем для последующей векторизации документов
+all_features_names = sorted(all_features_names_set)
+
+# Формируем карту признаков - для каждого документа его признаки с TF-IDF
+features_map = get_features_map(docs)
+
+# Векторизуем документы
+vectors = vectorize_docs(features_map, all_features_names)
+for vector in vectors:
+    print(vector)
+
