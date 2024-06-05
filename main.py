@@ -3,14 +3,11 @@ import nltk
 nltk.download('punkt')
 nltk.download('stopwords')
 
-import gensim
-
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 
 from pymorphy2 import MorphAnalyzer
 
-import dataclasses
 import math
 
 STOP_WORDS = set(stopwords.words('russian'))
@@ -144,4 +141,3 @@ features_map = get_features_map(docs)
 vectors = vectorize_docs(features_map, all_features_names)
 for vector in vectors:
     print(vector)
-
