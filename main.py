@@ -30,18 +30,15 @@ def preprocess(text: str):
     # from nltk.stem.snowball import SnowballStemmer
     # stemmer = SnowballStemmer(language=LANGUAGE)
     # stems = [stemmer.stem(x) for x in tokens]
-    print(tokens)
 
     # Удаление знаков препинания
     tokens = [x for x in tokens if x not in PUNCTUATIONS]
-    print(tokens)
 
     # Лемматизация - приведение слов в их нормальную форму
     morph = MorphAnalyzer()
     lemmas = [(x, morph.normal_forms(x)) for x in tokens]
     # Если нормальной формы не нашлось, оставляем как есть
     lemmas = [normals[0] if normals else x for x, normals in lemmas]
-    print(lemmas)
 
     return tokens, lemmas
 
@@ -67,31 +64,41 @@ def tf_idf(word: str, doc: list[str], docs: list[list[str]]):
     return tf(word, doc) * idf(word, docs)
 
 
-def analyze_texts(texts: list[str]):
+def texts2docs(texts: list[str]):
     docs = []
 
     for text in texts:
         # Обработка текста, конвертация в список лемм
         _, doc = preprocess(text)
         docs += [doc]
+    return docs
 
+
+def filter_features(doc: list[str], docs: list[list[str]], lim: int = -1):
+    # Множество слов в документе
+    features = set(doc)
+
+    # Для каждого слова из множества считаем TF-IDF
     data = []
+    for feature in features:
+        weight = tf_idf(feature, doc, docs)
+        data += [(feature, weight)]
+    data.sort(key=lambda x: x[1], reverse=True)
 
+    if lim >= 0:
+        data = data[:min(lim, len(data))]
+
+    features = [feature for feature, weight in data]
+    return features
+
+
+def create_features_map(docs: list[list[str]], features_lim: int = -1):
+    # "Карта" отфильтрованных признаков
+    features_map = []
     for doc in docs:
-        # Множество слов в документе
-        uniques = set(doc)
-
-        # Для каждого слова из множества считаем TF-IDF
-        weigths = []
-        for unique in uniques:
-            weight = tf_idf(unique, doc, docs)
-            weigths += [(unique, weight)]
-        weigths = sorted(weigths, key=lambda x: x[1], reverse=True)
-        print(weigths)
-
-        data += [(doc, weigths)]
-
-    return data
+        features = filter_features(doc, docs, features_lim)
+        features_map += [features]
+    return features_map
 
 
 TEXT1 = '''Идейные соображения высшего порядка, а также дальнейшее развитие
@@ -114,4 +121,5 @@ TEXT2 = '''Не следует, однако забывать, что консу
 '''
 
 
-data = analyze_texts([TEXT1, TEXT2])
+docs = texts2docs([TEXT1, TEXT2])
+features_map = create_features_map(docs, 50)
