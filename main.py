@@ -5,14 +5,15 @@ nltk.download('stopwords')
 
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
-from nltk.util import ngrams
+
+import gensim
 
 from pymorphy2 import MorphAnalyzer
 
 import math
 
 STOP_WORDS = set(stopwords.words('russian'))
-PUNCTUATIONS = ',.;:\'\"[]()?!'
+PUNCTUATIONS = ',.;:\'\"[]()?!-'
 
 
 def preprocess(text: str):
@@ -68,21 +69,29 @@ def tf_idf(word: str, doc: list[str], docs: list[list[str]]):
 
 def analyze_texts(texts: list[str]):
     docs = []
+
     for text in texts:
         # Обработка текста, конвертация в список лемм
         _, doc = preprocess(text)
         docs += [doc]
+
+    data = []
 
     for doc in docs:
         # Множество слов в документе
         uniques = set(doc)
 
         # Для каждого слова из множества считаем TF-IDF
-        weigths = {}
-
+        weigths = []
         for unique in uniques:
-            weigths[unique] = tf_idf(unique, doc, docs)
+            weight = tf_idf(unique, doc, docs)
+            weigths += [(unique, weight)]
+        weigths = sorted(weigths, key=lambda x: x[1], reverse=True)
         print(weigths)
+
+        data += [(doc, weigths)]
+
+    return data
 
 
 TEXT1 = '''Идейные соображения высшего порядка, а также дальнейшее развитие
@@ -105,4 +114,4 @@ TEXT2 = '''Не следует, однако забывать, что консу
 '''
 
 
-analyze_texts([TEXT1, TEXT2])
+data = analyze_texts([TEXT1, TEXT2])
