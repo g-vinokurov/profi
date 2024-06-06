@@ -346,6 +346,9 @@ classifier.fit(docs_train, classes_train)
 
 predicted = classifier.predict(docs_test)
 
+for i, filename in enumerate(os.listdir(os.path.join('texts', 'test'))):
+    print(filename, predicted[i])
+
 # Accuracy: (TP + TN) / (TP + FP + TN + FN)
 print('Accuracy:', accuracy_score(classes_test, predicted))
 # Precision: TP / (TP + FP)
